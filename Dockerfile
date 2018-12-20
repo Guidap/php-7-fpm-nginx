@@ -79,6 +79,8 @@ RUN ln -sf /dev/stdout /var/log/nginx/access.log \
     && chmod -R g+rwx /var/www/html \
     && umask 0007
 
+RUN composer global require hirak/prestissimo
+
 EXPOSE 80 443
 
 ADD docker/start.sh /start.sh
