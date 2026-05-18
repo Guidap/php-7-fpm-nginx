@@ -15,7 +15,6 @@ defaults:
 
 jobs:
   build:
-    if: github.repository_owner == 'Guidap'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -34,8 +33,6 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: 'false'
 
       - name: Build, tag and push image to Amazon ECR
         env:
