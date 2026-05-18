@@ -1,0 +1,64 @@
+name: CD Build
+
+on:
+  push:
+    tags:
+      - '**'
+
+env:
+  AWS_REGION: eu-west-3
+  ECR_REPOSITORY: php-7-fpm-nginx
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    if: github.repository_owner == 'Guidap'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set release version
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.GUIDAP_LEGACY_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.GUIDAP_LEGACY_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: 'false'
+
+      - name: Build, tag and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build --no-cache -t $ECR_REGISTRY/$ECR_REPOSITORY:$RELEASE_VERSION .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$RELEASE_VERSION
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$RELEASE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Notify job status
+        if: always()
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: ${{ secrets.CI_NOTIFICATION_ENDPOINT }}
+          method: 'POST'
+          username: ${{ secrets.CI_NOTIFICATION_USER }}
+          password: ${{ secrets.CI_NOTIFICATION_PASSWORD }}
+          data: |-
+            {
+              "status": "${{ job.status }}",
+              "ref": "${{ github.ref }}",
+              "repository": "${{ github.repository }}",
+              "initiator": "${{ github.actor }}",
+              "workflow": "${{ github.workflow }}",
+              "run_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
