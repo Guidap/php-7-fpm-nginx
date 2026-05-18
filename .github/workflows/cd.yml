@@ -18,13 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v6.0.2
 
       - name: Set release version
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6.1.1
         with:
           aws-access-key-id: ${{ secrets.GUIDAP_LEGACY_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.GUIDAP_LEGACY_AWS_SECRET_ACCESS_KEY }}
@@ -32,7 +32,7 @@ jobs:
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2.1.5
 
       - name: Build, tag and push image to Amazon ECR
         env:
@@ -44,7 +44,7 @@ jobs:
 
       - name: Notify job status
         if: always()
-        uses: fjogeleit/http-request-action@v1
+        uses: fjogeleit/http-request-action@551353b829c3646756b2ec2b3694f819d7957495 # v2.0.0
         with:
           url: ${{ secrets.CI_NOTIFICATION_ENDPOINT }}
           method: 'POST'
