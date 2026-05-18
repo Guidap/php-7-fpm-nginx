@@ -1,4 +1,4 @@
-FROM php:7.4-fpm
+FROM php:7.4-fpm-bullseye
 LABEL authors="Sylvain Marty <sylvain@guidap.co>"
 
 ARG ENV_LOG_STREAM=/var/
