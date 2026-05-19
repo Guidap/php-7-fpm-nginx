@@ -28,12 +28,15 @@ RUN apt-get update \
         && pecl install imagick \
         && docker-php-ext-enable imagick
 
-## Nginx
-RUN echo "deb http://nginx.org/packages/mainline/debian/ bullseye nginx" >> /etc/apt/sources.list \
-    && wget -qO - http://nginx.org/keys/nginx_signing.key | apt-key add - \
-	&& apt-get update \
-	&& apt-get install --no-install-recommends --no-install-suggests -y \
-        nginx
+## Nginx (mainline pinned, from nginx.org — fixes CVE-2026-42945)
+ARG NGINX_VERSION=1.31.0-1~bullseye
+RUN install -d /usr/share/keyrings \
+    && curl -fsSL https://nginx.org/keys/nginx_signing.key \
+        | gpg --dearmor -o /usr/share/keyrings/nginx-archive-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/mainline/debian bullseye nginx" \
+        > /etc/apt/sources.list.d/nginx.list \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y nginx=${NGINX_VERSION}
 
 RUN pecl install \
         imagick \
