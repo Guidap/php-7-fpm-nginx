@@ -3,7 +3,7 @@ name: CD Build
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - '*.*'
 
 env:
   AWS_REGION: eu-west-3
