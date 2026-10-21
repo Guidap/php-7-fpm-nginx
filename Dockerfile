@@ -1,6 +1,46 @@
 FROM php:7.4-fpm-bullseye
 LABEL authors="Sylvain Marty <sylvain@guidap.co>"
 
+# PHP2Shell (CVE-2026-109618, CVE-2026-109619): PHP 7.4 is EOL and gets no release.
+# Rebuild the image's own 7.4.33 sources with the PHP security team's backport
+# (php-src branch PHP-7.4-CVE-2026-109618-109619, commit 712e60f9ed), same configure options.
+# bullseye-security is gone from the mirrors since the LTS ended: drop it before any apt-get.
+COPY php2shell-7.4.patch /usr/src/
+RUN sed -i '/bullseye-security/d' /etc/apt/sources.list \
+    && savedAptMark="$(apt-mark showmanual)" \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        $PHPIZE_DEPS \
+        libargon2-dev \
+        libcurl4-openssl-dev \
+        libonig-dev \
+        libreadline-dev \
+        libsodium-dev \
+        libsqlite3-dev \
+        libssl-dev \
+        libxml2-dev \
+        zlib1g-dev \
+    && docker-php-source extract \
+    && cd /usr/src/php \
+    && patch -p1 < /usr/src/php2shell-7.4.patch \
+    && CFLAGS="$PHP_CFLAGS" CPPFLAGS="$PHP_CPPFLAGS" LDFLAGS="$PHP_LDFLAGS" \
+        ./configure $(php-config --configure-options) \
+    && make -j "$(nproc)" \
+    && find -type f -name '*.a' -delete \
+    && make install \
+    && find /usr/local -type f -perm '/0111' -exec sh -euc 'strip --strip-all "$@" || :' -- '{}' + \
+    && cd / \
+    && docker-php-source delete \
+    && rm /usr/src/php2shell-7.4.patch \
+    && apt-mark auto '.*' > /dev/null \
+    && apt-mark manual $savedAptMark > /dev/null \
+    && find /usr/local -type f -executable -exec ldd '{}' ';' \
+        | awk '/=>/ { so = $(NF-1); if (index(so, "/usr/local/") == 1) { next }; gsub("^/(usr/)?", "", so); printf "*%s\n", so }' \
+        | sort -u | xargs -r dpkg-query --search | cut -d: -f1 | sort -u | xargs -r apt-mark manual \
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && rm -rf /var/lib/apt/lists/* \
+    && php -v
+
 ARG ENV_LOG_STREAM=/var/
 ENV TERM=xterm
 
