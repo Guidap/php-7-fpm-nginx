@@ -44,6 +44,10 @@ RUN sed -i '/bullseye-security/d' /etc/apt/sources.list \
 ARG ENV_LOG_STREAM=/var/
 ENV TERM=xterm
 
+# PECL sources vendored (pecl.php.net/get/*.tgz, checked against xdebug.org and the
+# Imagick 3.8.1 git tag): installing from a local file needs no pecl.php.net at build time.
+COPY pecl/ /usr/src/pecl/
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libmagickwand-dev \
@@ -65,7 +69,7 @@ RUN apt-get update \
         gnupg \
         dirmngr \
         wget \
-        && pecl install imagick \
+        && pecl install /usr/src/pecl/imagick-3.8.1.tgz \
         && docker-php-ext-enable imagick
 
 ## Nginx (mainline pinned, from nginx.org — fixes CVE-2026-42945)
@@ -78,10 +82,8 @@ RUN install -d /usr/share/keyrings \
     && apt-get update \
     && apt-get install --no-install-recommends --no-install-suggests -y nginx=${NGINX_VERSION}
 
-RUN pecl install \
-        imagick \
-        xdebug-3.1.5 \
-        unzip \
+RUN pecl install /usr/src/pecl/xdebug-3.1.5.tgz \
+    && rm -rf /usr/src/pecl \
     && docker-php-ext-install \
         pdo_mysql \
         intl \
